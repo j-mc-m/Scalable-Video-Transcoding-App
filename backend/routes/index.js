@@ -17,14 +17,14 @@ AWS.config.update({
 
 
 const dynamoClient = new AWS.DynamoDB.DocumentClient();
-const dynamoName = "n10467009-a2-status";
+const dynamoName = process.env.AWS_DYNAMO_DB_QUEUE;
 
 
 s3 = new AWS.S3({apiVersion: '2006-03-01'});
 
 // Buckets
-const s3Ingest = "n10467009-a2-ingest";
-const s3Transcode = "n10467009-a2-transcode";
+const s3Ingest = process.env.AWS_S3_INGEST;
+const s3Transcode = process.env.AWS_S3_TRANSCODE;
 
 const getByDynamoID = async (dynamoID) => {
   const params = {
