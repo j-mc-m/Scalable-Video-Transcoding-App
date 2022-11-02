@@ -25,28 +25,32 @@ s3 = new AWS.S3({apiVersion: '2006-03-01'});
 // Buckets
 const s3Ingest = process.env.AWS_S3_INGEST;
 const s3Transcode = process.env.AWS_S3_TRANSCODE;
+const qut_username = process.env.QUT_USERNAME;
 
-const getByDynamoID = async (dynamoID) => {
+const getS3URLByDynamoID = async (dynamoID) => {
   const params = {
     TableName: dynamoName,
     Key: {
-      dynamoID,
+      'qut-username': qut_username,
+      id: dynamoID,
     }
   }
-  return await dynamoClient.get(params).promise();
+  //return dynamoClient.get(params).promise();
+
+  const data = await dynamoClient.get(params).promise()
+  //console.log(data.Item.s3Url)
+  return data.Item.s3Url
 }
 
 const updateDynamo = async (id, s3Url) => {
   const params = {
     TableName: dynamoName,
     Item: {
-      'qut-username': "n10467009@qut.edu.au",
+      'qut-username': qut_username,
       id: id,
       s3Url: s3Url
     },
   }
-
-  console.log(params)
   return await dynamoClient.put(params).promise()
 }
 
@@ -67,7 +71,10 @@ router.post('/', function(req, res) {
     res.status(400).send("No S3 Key");
   }
 
-  updateDynamo(dynamoID, s3Key)
+  //updateDynamo(dynamoID, s3Key)
+  getS3URLByDynamoID(dynamoID).then((url) => {
+    console.log(url)
+  })
 
   res.status(200).send({
     dynamoID, s3Key
