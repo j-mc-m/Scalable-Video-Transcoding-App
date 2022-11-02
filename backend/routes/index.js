@@ -4,7 +4,7 @@ require('dotenv').config();
 var ffmpeg = require('fluent-ffmpeg');
 var path = require('path')
 const https = require('https')
-const fs = require('fs');
+const fs = require('fs').promises;
 
 
 
@@ -60,7 +60,8 @@ const updateDynamo = async (id, s3Url) => {
   return await dynamoClient.put(params).promise()
 }
 
-function downloadTmpFromS3(url) {
+downloadTmpFromS3 = async (s3Key) => {
+  /*
   console.log("downloaded from url: " + url)
   https.get(url, (res) => {
     const path = '/tmp/vid.gif'
@@ -70,9 +71,22 @@ function downloadTmpFromS3(url) {
       filePath.close()
       console.log("downloaded vid.gif")
     })
-  })
+  })*/
 
-  return '/tmp/vid.gif'
+  //return '/tmp/vid.gif'
+
+  const params = {
+    Bucket: s3Ingest,
+    Key: s3Key,
+  }
+
+  const { Body } = await s3.getObject(params).promise()
+  const location = '/tmp/' + s3Key
+  await fs.writeFile(location, Body)
+
+
+
+
 }
 
 function transcode(file) {
@@ -110,13 +124,16 @@ router.post('/', function(req, res) {
 
   //updateDynamo(dynamoID, s3Key)
   
+  /*
   getS3UrlByDynamoID(dynamoID).then((url) => {
     console.log(url)
   
     const sourceFilePath = downloadTmpFromS3(url);
     const transcodeFilePath = transcode(sourceFilePath);
     console.log(transcodeFilePath)
-  })
+  })*/
+
+  downloadTmpFromS3(s3Key)
 
   res.status(200).send({
     dynamoID, s3Key
