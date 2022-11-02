@@ -45,7 +45,7 @@ const getS3UrlByDynamoID = async (dynamoID) => {
 
   const data = await dynamoClient.get(params).promise()
   //console.log(data.Item.s3Url)
-  return data.Item.s3Url
+  return data.Item.s3SourceUrl
 }
 
 const updateDynamo = async (id, s3Url) => {
@@ -112,8 +112,10 @@ router.post('/', function(req, res) {
   
   getS3UrlByDynamoID(dynamoID).then((url) => {
     console.log(url)
+  
     const sourceFilePath = downloadTmpFromS3(url);
     const transcodeFilePath = transcode(sourceFilePath);
+    console.log(transcodeFilePath)
   })
 
   res.status(200).send({
