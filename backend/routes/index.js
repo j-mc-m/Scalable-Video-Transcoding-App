@@ -2,10 +2,8 @@ var express = require('express');
 var router = express.Router();
 require('dotenv').config();
 var ffmpeg = require('fluent-ffmpeg');
-var path = require('path')
-const https = require('https')
 const fs = require('fs').promises;
-
+const md5 = require("md5");
 
 
 // AWS configuration
@@ -61,33 +59,30 @@ const updateDynamo = async (id, s3Url) => {
 }
 
 downloadTmpFromS3 = async (s3Key) => {
-  /*
-  console.log("downloaded from url: " + url)
-  https.get(url, (res) => {
-    const path = '/tmp/vid.gif'
-    const filePath = fs.createWriteStream(path)
-    res.pipe(filePath)
-    filePath.on('finish', () => {
-      filePath.close()
-      console.log("downloaded vid.gif")
-    })
-  })*/
-
-  //return '/tmp/vid.gif'
-
   const params = {
     Bucket: s3Ingest,
     Key: s3Key,
   }
 
   const { Body } = await s3.getObject(params).promise()
+
   const location = '/tmp/' + s3Key
   await fs.writeFile(location, Body)
-
-
-
-
 }
+
+
+function uploadTranscodeToS3(file) {
+  fs.readFile(path, (err, data) => {
+    const params = {
+      Bucket: s3Transcode,
+      Key: file.basename(),
+      Body: data,
+    }
+    s3.putObject(params)
+  })
+  
+}
+
 
 function transcode(file) {
   var ffmpegExec = new ffmpeg(file)
@@ -110,17 +105,26 @@ router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
+
+// We send a POST with the DynamoDB secondary key ID.
+// Download from S3 Ingest with that id to /tmp/$id.*
+// Update status in DynamoDB to pending transcode
+// Transcode to mkv with reduced file size
+// Upload to S3 Transcode
+// Get link to S3 Transcode file
+// Append S3 Transcode Link and set status to completed
 router.post('/', function(req, res) {
-  
   const dynamoID = req.query.dynamoID;
   if(!dynamoID) {
     res.status(400).send("No ID");
   }
 
+  /*
   const s3Key = req.query.s3Key;
   if(!s3Key) {
     res.status(400).send("No S3 Key");
   }
+  */
 
   //updateDynamo(dynamoID, s3Key)
   
