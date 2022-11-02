@@ -15,6 +15,7 @@ AWS.config.update({
   sessionToken: process.env.AWS_SESSION_TOKEN
 });
 
+
 const dynamoClient = new AWS.DynamoDB.DocumentClient();
 const dynamoName = "n10467009-a2-status";
 
@@ -35,6 +36,20 @@ const getByDynamoID = async (dynamoID) => {
   return await dynamoClient.get(params).promise();
 }
 
+const updateDynamo = async (id, s3Url) => {
+  const params = {
+    TableName: dynamoName,
+    Item: {
+      'qut-username': "n10467009@qut.edu.au",
+      id: id,
+      s3Url: s3Url
+    },
+  }
+
+  console.log(params)
+  return await dynamoClient.put(params).promise()
+}
+
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
@@ -51,6 +66,9 @@ router.post('/', function(req, res) {
   if(!s3Key) {
     res.status(400).send("No S3 Key");
   }
+
+  updateDynamo(dynamoID, s3Key)
+
   res.status(200).send({
     dynamoID, s3Key
   })
