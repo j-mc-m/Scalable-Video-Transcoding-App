@@ -27,7 +27,7 @@ const s3Ingest = process.env.AWS_S3_INGEST;
 const s3Transcode = process.env.AWS_S3_TRANSCODE;
 const qut_username = process.env.QUT_USERNAME;
 
-const getS3URLByDynamoID = async (dynamoID) => {
+const getS3UrlByDynamoID = async (dynamoID) => {
   const params = {
     TableName: dynamoName,
     Key: {
@@ -48,7 +48,7 @@ const updateDynamo = async (id, s3Url) => {
     Item: {
       'qut-username': qut_username,
       id: id,
-      s3Url: s3Url
+      s3TranscodeUrl: s3Url
     },
   }
   return await dynamoClient.put(params).promise()
@@ -72,7 +72,7 @@ router.post('/', function(req, res) {
   }
 
   //updateDynamo(dynamoID, s3Key)
-  getS3URLByDynamoID(dynamoID).then((url) => {
+  getS3UrlByDynamoID(dynamoID).then((url) => {
     console.log(url)
   })
 
