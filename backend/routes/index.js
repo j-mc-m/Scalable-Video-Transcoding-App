@@ -3,7 +3,7 @@ var router = express.Router();
 require('dotenv').config();
 var ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs').promises;
-const md5 = require("md5");
+//const md5 = require("md5");
 
 
 // AWS configuration
@@ -31,7 +31,23 @@ const s3Ingest = process.env.AWS_S3_INGEST;
 const s3Transcode = process.env.AWS_S3_TRANSCODE;
 const qut_username = process.env.QUT_USERNAME;
 
-const getS3UrlByDynamoID = async (dynamoID) => {
+
+const getS3KeyFromDynamo = async (dynamoID) => {
+  const params = {
+    TableName: dynamoName,
+    Key: {
+      'qut-username': qut_username,
+      id: dynamoID,
+    }
+  }
+  //return dynamoClient.get(params).promise();
+
+  const data = await dynamoClient.get(params).promise()
+  //console.log(data.Item.s3Url)
+  return data.Item.s3Key
+}
+
+const getS3SourceUrlByDynamoID = async (dynamoID) => {
   const params = {
     TableName: dynamoName,
     Key: {
@@ -46,13 +62,14 @@ const getS3UrlByDynamoID = async (dynamoID) => {
   return data.Item.s3SourceUrl
 }
 
-const updateDynamo = async (id, s3Url) => {
+const updateDynamo = async (id, status, s3TranscodeUrl) => {
   const params = {
     TableName: dynamoName,
     Item: {
       'qut-username': qut_username,
       id: id,
-      s3SourceUrl: s3Url
+      status: status,
+      s3TranscodeUrl: s3TranscodeUrl
     },
   }
   return await dynamoClient.put(params).promise()
@@ -68,6 +85,7 @@ downloadTmpFromS3 = async (s3Key) => {
 
   const location = '/tmp/' + s3Key
   await fs.writeFile(location, Body)
+
 }
 
 
@@ -136,8 +154,15 @@ router.post('/', function(req, res) {
     const transcodeFilePath = transcode(sourceFilePath);
     console.log(transcodeFilePath)
   })*/
+  //const s3SourceURL = getS3SourceUrlByDynamoID(dynamoID)
 
-  downloadTmpFromS3(s3Key)
+  getS3KeyFromDynamo(dynamoID).then((s3Key) => {
+    downloadTmpFromS3(s3Key).then((file) => {
+      transcode(file).then((file) => {
+        uploadTranscodeToS3(file)
+      })
+    })
+  })
 
   res.status(200).send({
     dynamoID, s3Key
