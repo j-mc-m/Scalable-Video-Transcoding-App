@@ -76,6 +76,9 @@ const updateDynamo = async (id, status, s3TranscodeUrl) => {
   return await dynamoClient.put(params).promise()
 }
 
+
+
+
 downloadTmpFromS3 = async (s3Key) => {
   const params = {
     Bucket: s3Ingest,
@@ -86,36 +89,81 @@ downloadTmpFromS3 = async (s3Key) => {
 
   const location = '/tmp/' + s3Key
   await fs.writeFile(location, Body)
-
+  return location
 }
 
+async function getData(s3Key) {
+  const params = {
+    Bucket: s3Ingest,
+    Key: s3Key,
+  }
+  return await s3.getObject(params)
+}
 
-function uploadTranscodeToS3(file) {
-  fs.readFile(path, (err, data) => {
-    const params = {
-      Bucket: s3Transcode,
-      Key: file.basename(),
-      Body: data,
-    }
-    s3.putObject(params)
-  })
+/*
+const downloadTmpFromS3 = async(s3Key) => {
+  return new Promise((resolve, reject) => {
+    
   
+
+    getData.then((data) => {
+      const location = '/tmp/' + s3Key
+      fs.writeFile(location, data)
+      resolve(location)
+    })
+  
+  })
+}*/
+
+
+
+
+async function uploadTranscodeToS3(file) {
+  console.log("uploading " + file + " to s3 transcode bucket")
+  /*
+  const fileData =  fs.readFile(file)
+  const fileDataBuffer = Buffer.from(fileData.data, 'binary')
+  const fileKey = path.basename(file)
+  */
+
+  const fileData = await fs.readFile(file)
+
+  const params = {
+    Bucket: s3Transcode,
+    Key: path.basename(file),
+    Body: fileData,
+  } 
+
+  console.log(params)
+    
+  await s3.upload(params, function(err, result) {
+    if(err) {
+      console.log(err)
+    } else {
+      console.log("successfully uploaded to public s3 transcode: " + result)
+    }
+  })  
+
 }
 
 
-function transcode(file, s3Key) {
-  var ffmpegExec = new ffmpeg(file)
+async function transcode(file, s3Key) {
+  const newFile = '/tmp/' + s3Key + '.mkv'
+  console.log("ffmpeg file path: " + file)
+  var ffmpegExec = await new ffmpeg(file)
 
   ffmpegExec.setFfmpegPath("/usr/bin/ffmpeg")
-  ffmpegExec.withSize('75%').withFps(24).toFormat('matroska')
-      .on('end', function () {
+  await ffmpegExec.withSize('75%').withFps(24).toFormat('matroska')
+    .on('end', function () {
       console.log('file has been converted successfully');
-  })
-      .on('error', function (err) {
-          console.log('an error happened: ' + err.message);
-      })
-      .saveToFile(s3Key + 'mkv');
-  return s3Key + 'mkv'
+      uploadTranscodeToS3(newFile)
+    })
+    .on('error', function (err) {
+        console.log('an error happened: ' + err.message);
+    })
+    .saveToFile(newFile)
+  //return '/tmp/' + s3Key + '.mkv'
+  //await uploadTranscodeToS3(newFile)
 }
 
 
@@ -133,21 +181,12 @@ router.get('/', function(req, res, next) {
 // Upload to S3 Transcode
 // Get link to S3 Transcode file
 // Append S3 Transcode Link and set status to completed
-router.post('/', function(req, res) {
+router.post('/', async function(req, res) {
   const dynamoID = req.query.dynamoID;
   if(!dynamoID) {
     res.status(400).send("No ID");
   }
 
-  /*
-  const s3Key = req.query.s3Key;
-  if(!s3Key) {
-    res.status(400).send("No S3 Key");
-  }
-  */
-
-  //updateDynamo(dynamoID, s3Key)
-  
   /*
   getS3UrlByDynamoID(dynamoID).then((url) => {
     console.log(url)
@@ -158,15 +197,41 @@ router.post('/', function(req, res) {
   })*/
   //const s3SourceURL = getS3SourceUrlByDynamoID(dynamoID)
 
-  getS3KeyFromDynamo(dynamoID).then((s3Key) => {
-    const tmpFile = downloadTmpFromS3(s3Key)
-    const newFile = transcode(tmpFile, s3Key)
-    uploadTranscodeToS3(newFile)
+  try {
+    const tmpFile = await new Promise((resolve, reject) => {
+      resolve(downloadTmpFromS3(req.query.s3Key)).catch((err) => reject(err))
+    })
+
+    try {
+      await new Promise((resolve, reject) => {
+        resolve(transcode(tmpFile, req.query.s3Key)).catch((err) => reject(err))
+      })/*.then((newFile) => {
+        uploadTranscodeToS3(newFile)
+      })*/
+      //console.log("new file: " + newFile)
+
+
+    } catch(err) {
+      console.log(err)
+    }
+
+
+
+  } catch(err) {
+    console.log(err)
+  }
+
+  //getS3KeyFromDynamo(dynamoID).then((s3Key) => {
+    //downloadTmpFromS3(s3Key).then((response) => console.log("resp: " + response))
+    //console.log(tmpFile)
+    //const newFile = transcode(tmpFile, s3Key)
+    //console.log(newFile)
+    //uploadTranscodeToS3(newFile)
     
-  })
+  
 
   res.status(200).send({
-    dynamoID, s3Key
+    dynamoID
   })
 });
 
