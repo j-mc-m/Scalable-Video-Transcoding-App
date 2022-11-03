@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto&family=Montserrat&family=Nunito:wght@700&display=swap');
+
+/* Main */
+body {
+    font-family: 'Montserrat', sans-serif;
+    color: #000;
+}
+
+div.Page {
+    background-color: #ffe3b7;
+    padding: 20px;
+}
+
+footer {
+    background-color: #fff6e9;
+    padding: 20px 20px;
+    clear: both;
+}
+
+footer span {
+    font-size: 0.8em;
+    color: #888;
+}
+
+footer a {
+    color: #888;
+}
+
+
+/* Navigation */
+.nav-fixed-height {
+    height: 70px;
+}
+
+nav.bg-custom {
+    background-color: #ffc971;
+}
+
+div .loggedInAs {
+    font-size: 14px;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #ffe3b7;
+}
+
+/* Loading */
+div.loading {
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+div.loading p {
+    font-style: italic;
+}
+
+
+div.dropzone {
+flex: 1;
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 20px;
+border-width: 2;
+border-radius: 2;
+border-color: #ffc971;
+border-style: dashed;
+background-color: #fff6e9;
+color: #888;
+outline: none;
+transition: border .24s ease-in-out;
+}
