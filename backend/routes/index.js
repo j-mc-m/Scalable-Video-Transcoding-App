@@ -4,6 +4,7 @@ require('dotenv').config();
 var ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs').promises;
 //const md5 = require("md5");
+var path = require('path')
 
 
 // AWS configuration
@@ -102,7 +103,7 @@ function uploadTranscodeToS3(file) {
 }
 
 
-function transcode(file) {
+function transcode(file, s3Key) {
   var ffmpegExec = new ffmpeg(file)
 
   ffmpegExec.setFfmpegPath("/usr/bin/ffmpeg")
@@ -113,7 +114,8 @@ function transcode(file) {
       .on('error', function (err) {
           console.log('an error happened: ' + err.message);
       })
-      .saveToFile('vid6.mkv');
+      .saveToFile(s3Key + 'mkv');
+  return s3Key + 'mkv'
 }
 
 
@@ -157,11 +159,10 @@ router.post('/', function(req, res) {
   //const s3SourceURL = getS3SourceUrlByDynamoID(dynamoID)
 
   getS3KeyFromDynamo(dynamoID).then((s3Key) => {
-    downloadTmpFromS3(s3Key).then((file) => {
-      transcode(file).then((file) => {
-        uploadTranscodeToS3(file)
-      })
-    })
+    const tmpFile = downloadTmpFromS3(s3Key)
+    const newFile = transcode(tmpFile, s3Key)
+    uploadTranscodeToS3(newFile)
+    
   })
 
   res.status(200).send({
