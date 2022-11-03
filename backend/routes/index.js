@@ -9,9 +9,6 @@ var path = require('path')
 
 // AWS configuration
 const AWS = require('aws-sdk');
-//const { get } = require('../routes');
-//AWS.config.update({region: 'ap-southeast-2'});
-//AWS.config.loadFromPath('./config.json');
 
 AWS.config.update({
   region: process.env.AWS_DEFAULT_REGION,
@@ -48,7 +45,7 @@ const getS3KeyFromDynamo = async (dynamoID) => {
   return data.Item.s3Key
 }
 
-const getS3SourceUrlByDynamoID = async (dynamoID) => {
+const getS3KeyByDynamoID = async (dynamoID) => {
   const params = {
     TableName: dynamoName,
     Key: {
@@ -60,7 +57,7 @@ const getS3SourceUrlByDynamoID = async (dynamoID) => {
 
   const data = await dynamoClient.get(params).promise()
   //console.log(data.Item.s3Url)
-  return data.Item.s3SourceUrl
+  return data.Item.s3Key
 }
 
 const updateDynamo = async (id, status, s3TranscodeUrl) => {
@@ -120,11 +117,6 @@ const downloadTmpFromS3 = async(s3Key) => {
 
 async function uploadTranscodeToS3(file) {
   console.log("uploading " + file + " to s3 transcode bucket")
-  /*
-  const fileData =  fs.readFile(file)
-  const fileDataBuffer = Buffer.from(fileData.data, 'binary')
-  const fileKey = path.basename(file)
-  */
 
   const fileData = await fs.readFile(file)
 
@@ -141,6 +133,7 @@ async function uploadTranscodeToS3(file) {
       console.log(err)
     } else {
       console.log("successfully uploaded to public s3 transcode: " + result.Location)
+      return result.Location
     }
   })  
 
@@ -156,14 +149,14 @@ async function transcode(file, s3Key) {
   await ffmpegExec.withSize('75%').withFps(24).toFormat('matroska')
     .on('end', function () {
       console.log('file has been converted successfully');
-      uploadTranscodeToS3(newFile)
+      uploadTranscodeToS3(newFile).then(rsp => {
+        console.log("rsp lmao: " + rsp)
+      })
     })
     .on('error', function (err) {
         console.log('an error happened: ' + err.message);
     })
     .saveToFile(newFile)
-  //return '/tmp/' + s3Key + '.mkv'
-  //await uploadTranscodeToS3(newFile)
 }
 
 
@@ -187,29 +180,17 @@ router.post('/', async function(req, res) {
     res.status(400).send("No ID");
   }
 
-  /*
-  getS3UrlByDynamoID(dynamoID).then((url) => {
-    console.log(url)
-  
-    const sourceFilePath = downloadTmpFromS3(url);
-    const transcodeFilePath = transcode(sourceFilePath);
-    console.log(transcodeFilePath)
-  })*/
-  //const s3SourceURL = getS3SourceUrlByDynamoID(dynamoID)
+  const s3Key = await getS3KeyByDynamoID(dynamoID)
 
   try {
     const tmpFile = await new Promise((resolve, reject) => {
-      resolve(downloadTmpFromS3(req.query.s3Key)).catch((err) => reject(err))
+      resolve(downloadTmpFromS3(s3Key)).catch((err) => reject(err))
     })
 
     try {
       await new Promise((resolve, reject) => {
-        resolve(transcode(tmpFile, req.query.s3Key)).catch((err) => reject(err))
-      })/*.then((newFile) => {
-        uploadTranscodeToS3(newFile)
-      })*/
-      //console.log("new file: " + newFile)
-
+        resolve(transcode(tmpFile, s3Key)).catch((err) => reject(err))
+      })
 
     } catch(err) {
       console.log(err)
@@ -221,14 +202,7 @@ router.post('/', async function(req, res) {
     console.log(err)
   }
 
-  //getS3KeyFromDynamo(dynamoID).then((s3Key) => {
-    //downloadTmpFromS3(s3Key).then((response) => console.log("resp: " + response))
-    //console.log(tmpFile)
-    //const newFile = transcode(tmpFile, s3Key)
-    //console.log(newFile)
-    //uploadTranscodeToS3(newFile)
-    
-  
+
 
   res.status(200).send({
     dynamoID
