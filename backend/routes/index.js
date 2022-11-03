@@ -140,7 +140,7 @@ async function uploadTranscodeToS3(file) {
     if(err) {
       console.log(err)
     } else {
-      console.log("successfully uploaded to public s3 transcode: " + result)
+      console.log("successfully uploaded to public s3 transcode: " + result.Location)
     }
   })  
 
