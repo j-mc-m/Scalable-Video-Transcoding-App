@@ -128,14 +128,19 @@ async function uploadTranscodeToS3(file) {
 
   console.log(params)
     
-  await s3.upload(params, function(err, result) {
-    if(err) {
-      console.log(err)
-    } else {
-      console.log("successfully uploaded to public s3 transcode: " + result.Location)
-      return result.Location
-    }
-  })  
+  return new Promise((resolve, reject) => {
+    s3.upload(params, function(err, result) {
+      if(err) {
+        console.log(err)
+        reject(err)
+      } else {
+        console.log("successfully uploaded to public s3 transcode: " + result.Location)
+        //returnUrl = result.Location
+        // return result.Location
+        resolve(result.Location)
+      }
+    })
+  })
 
 }
 
@@ -146,17 +151,28 @@ async function transcode(file, s3Key) {
   var ffmpegExec = await new ffmpeg(file)
 
   ffmpegExec.setFfmpegPath("/usr/bin/ffmpeg")
-  await ffmpegExec.withSize('75%').withFps(24).toFormat('matroska')
-    .on('end', function () {
-      console.log('file has been converted successfully');
-      uploadTranscodeToS3(newFile).then(rsp => {
-        console.log("rsp lmao: " + rsp)
-      })
-    })
-    .on('error', function (err) {
-        console.log('an error happened: ' + err.message);
-    })
-    .saveToFile(newFile)
+
+  return new Promise((resolve, reject) => {
+    try {
+      ffmpegExec.withSize('75%').withFps(24).toFormat('matroska')
+        .on('end', function () {
+          console.log('file has been converted successfully');
+            uploadTranscodeToS3(newFile).then(url => {
+              console.log("url:" + url)
+              resolve(url)
+            })
+          /*return new uploadTranscodeToS3(newFile)/*.then(rsp => {
+            console.log("rsp lmao: " + rsp)
+          })*/
+        })
+        .on('error', function (err) {
+            console.log('an error happened: ' + err.message);
+        })
+        .saveToFile(newFile)
+    } catch(err) {
+      console.log(err)
+    }
+  })
 }
 
 
@@ -188,9 +204,12 @@ router.post('/', async function(req, res) {
     })
 
     try {
-      await new Promise((resolve, reject) => {
-        resolve(transcode(tmpFile, s3Key)).catch((err) => reject(err))
-      })
+      transcode(tmpFile, s3Key).then(url => {
+      
+        res.status(200).send({
+          s3TranscodeUrl: url
+        })})
+      
 
     } catch(err) {
       console.log(err)
@@ -201,12 +220,6 @@ router.post('/', async function(req, res) {
   } catch(err) {
     console.log(err)
   }
-
-
-
-  res.status(200).send({
-    dynamoID
-  })
 });
 
 
