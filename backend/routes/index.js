@@ -4,7 +4,7 @@ var router = express.Router();
 require('dotenv').config();
 var ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs').promises;
-var path = require('path')
+var path = require('path');
 
 // AWS configuration
 const AWS = require('aws-sdk');
@@ -31,12 +31,11 @@ s3 = new AWS.S3({apiVersion: '2006-03-01'});
 const s3Ingest = process.env.AWS_S3_INGEST;
 const s3Transcode = process.env.AWS_S3_TRANSCODE;
 
-
-
-
+/********
+ * Update the Dynamo DB table status and/or add the transcoded URL
+ */
 const updateDynamo = async (dynamoID, status, s3TranscodeUrl) => {
-  const s3Key = await getS3KeyByDynamoID(dynamoID)
-  console.log("update s3 key: "  + s3Key + " did: " + dynamoID)
+  const s3Key = await getS3KeyByDynamoID(dynamoID);
   const params = {
     TableName: dynamoName,
     Item: {
@@ -47,11 +46,14 @@ const updateDynamo = async (dynamoID, status, s3TranscodeUrl) => {
       s3TranscodeUrl: s3TranscodeUrl
     },
   }
-  return await dynamoClient.put(params).promise()
+
+  return await dynamoClient.put(params).promise();
 }
 
 
-
+/********
+ * Update the Dynamo DB table status and/or add the transcoded URL
+ */
 const getS3KeyByDynamoID = async (dynamoID) => {
   const params = {
     TableName: dynamoName,
@@ -60,162 +62,152 @@ const getS3KeyByDynamoID = async (dynamoID) => {
       id: dynamoID,
     }
   }
-  //return dynamoClient.get(params).promise();
-  
-  const data = await dynamoClient.get(params).promise()
-  return data.Item.s3Key
+
+  const data = await dynamoClient.get(params).promise();
+  return data.Item.s3Key;
 }
 
 
-
+/********
+ * Update the Dynamo DB table status and/or add the transcoded URL
+ */
 downloadTmpFromS3 = async (dynamoID, s3Key) => {
   const status = "pending download from S3"
-  updateDynamo(dynamoID, status, "")
+  updateDynamo(dynamoID, status, "");
 
   const params = {
     Bucket: s3Ingest,
     Key: s3Key,
   }
 
-  const { Body } = await s3.getObject(params).promise()
+  const { Body } = await s3.getObject(params).promise();
 
-  const location = '/tmp/' + s3Key
-  await fs.writeFile(location, Body)
-  return location
+  const location = '/tmp/' + s3Key;
+  await fs.writeFile(location, Body);
+  return location;
 }
 
-async function getData(s3Key) {
-  const params = {
-    Bucket: s3Ingest,
-    Key: s3Key,
-  }
-  return await s3.getObject(params)
-}
-
-
-
+/********
+ * Given a file path it will upload it to the public Transcode S3 bucket with the basename as the key
+ */
 async function uploadTranscodeToS3(dynamoID, file) {
-  const status = "uploading to public S3"
-  updateDynamo(dynamoID, status, "")
+  // Update Dynamo DB status
+  const status = "uploading to public S3";
+  updateDynamo(dynamoID, status, "");
 
-  console.log("uploading " + file + " to s3 transcode bucket")
+  console.log("uploading " + file + " to s3 transcode bucket");
 
-  const fileData = await fs.readFile(file)
+  // Read file
+  const fileData = await fs.readFile(file);
 
   const params = {
     Bucket: s3Transcode,
     Key: path.basename(file),
     Body: fileData,
   } 
-
-  console.log(params)
     
   return new Promise((resolve, reject) => {
     s3.upload(params, function(err, result) {
       if(err) {
-        console.log(err)
-        reject(err)
+        console.log(err);
+        reject(err);
       } else {
-        const s3TranscodeUrl = result.Location
-        console.log("successfully uploaded to public s3 transcode: " + s3TranscodeUrl)
+        // Get public URL of newly uploaded object
+        const s3TranscodeUrl = result.Location;
+        console.log("successfully uploaded to public s3 transcode: " + s3TranscodeUrl);
 
-        const status = "finished"
-        updateDynamo(dynamoID, status, s3TranscodeUrl)
-        resolve(s3TranscodeUrl)
+        // Update Dynamo DB status
+        const status = "finished";
+        updateDynamo(dynamoID, status, s3TranscodeUrl);
+
+        // Resolve promise with the direct link to the newly uploaded object
+        resolve(s3TranscodeUrl);
       }
-    })
-  })
-
+    });
+  });
 }
 
-
+/********
+ * Transcode the given file before uploading to the public Transcode S3 bucket
+ */
 async function transcode(dynamoID, file, s3Key) {
-  const newFile = '/tmp/' + s3Key + '.mkv'
+  const newFile = "/tmp/" + s3Key + ".mkv";
 
-  const status = "transcoding"
-  updateDynamo(dynamoID, status, "")
+  // Update Dynamo DB status
+  const status = "transcoding";
+  updateDynamo(dynamoID, status, "");
 
-  console.log("ffmpeg file path: " + file)
+  console.log("ffmpeg file path: " + file);
 
-  var ffmpegExec = await new ffmpeg(file)
-
-  ffmpegExec.setFfmpegPath("/usr/bin/ffmpeg")
+  // Read file into ffmpeg and set its path on a Linux system
+  var ffmpegExec = await new ffmpeg(file);
+  ffmpegExec.setFfmpegPath("/usr/bin/ffmpeg");
 
   return new Promise((resolve, reject) => {
     try {
-      ffmpegExec.withSize('75%').withFps(24).toFormat('matroska')
-        .on('end', function () {
+      ffmpegExec.withSize('75%').withFps(24).toFormat("matroska")
+        .on("end", function () {
           console.log('file has been converted successfully');
 
-          const status = "transcoded"
-          updateDynamo(dynamoID, status, "")
+          // Update Dynamo DB status
+          const status = "transcoded";
+          updateDynamo(dynamoID, status, "");
 
           uploadTranscodeToS3(dynamoID, newFile).then(url => {
-            console.log("url:" + url)
-            resolve(url)
-          })
-          /*return new uploadTranscodeToS3(newFile)/*.then(rsp => {
-            console.log("rsp lmao: " + rsp)
-          })*/
+            resolve(url);
+          });
+          
         })
         .on('error', function (err) {
             console.log('an error happened: ' + err.message);
-            reject(err.message)
+            reject(err.message);
         })
-        .saveToFile(newFile)
+        .saveToFile(newFile);
+
     } catch(err) {
-      console.log(err)
-      reject(err)
+      console.log(err);
+      reject(err);
     }
-  })
+  });
 }
 
-
-
-/* GET home page. */
+/********
+ * GET home page, unused on the backend
+ */
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
-
-// We send a POST with the DynamoDB secondary key ID.
-// Download from S3 Ingest with that id to /tmp/$id.*
-// Update status in DynamoDB to pending transcode
-// Transcode to mkv with reduced file size
-// Upload to S3 Transcode
-// Get link to S3 Transcode file
-// Append S3 Transcode Link and set status to completed
+/********
+ * POST home page
+ */
 router.post('/', async function(req, res) {
   const dynamoID = req.query.dynamoID;
   if(!dynamoID) {
-    res.status(400).send("No ID");
+    res.status(400).send("No DynamoID was provided");
   }
 
-  const s3Key = await getS3KeyByDynamoID(dynamoID)
+  const s3Key = await getS3KeyByDynamoID(dynamoID);
 
   try {
     const tmpFile = await new Promise((resolve, reject) => {
-      resolve(downloadTmpFromS3(dynamoID, s3Key)).catch((err) => reject(err))
+      resolve(downloadTmpFromS3(dynamoID, s3Key)).catch((err) => reject(err));
     })
 
     try {
       transcode(dynamoID, tmpFile, s3Key).then(url => {
-      
         res.status(200).send({
           s3TranscodeUrl: url
-        })})
+        });
+      });
       
-
     } catch(err) {
-      console.log(err)
+      console.log(err);
     }
 
-
-
   } catch(err) {
-    console.log(err)
+    console.log(err);
   }
 });
-
 
 module.exports = router;
