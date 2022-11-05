@@ -34,13 +34,13 @@ const s3Transcode = process.env.AWS_S3_TRANSCODE;
 /********
  * Update the Dynamo DB table status and/or add the transcoded URL
  */
-const updateDynamo = async (dynamoID, status, s3TranscodeUrl) => {
-  const s3Key = await getS3KeyByDynamoID(dynamoID);
+const updateDynamo = async (dynamoUUID, status, s3TranscodeUrl) => {
+  const s3Key = await getS3KeyByDynamoUUID(dynamoUUID);
   const params = {
     TableName: dynamoName,
     Item: {
       'qut-username': qut_username,
-      id: dynamoID,
+      uuid: dynamoUUID,
       s3Key: s3Key,
       status: status,
       s3TranscodeUrl: s3TranscodeUrl
@@ -54,12 +54,12 @@ const updateDynamo = async (dynamoID, status, s3TranscodeUrl) => {
 /********
  * Returns the S3 Key from the Dynamo DB status table
  */
-const getS3KeyByDynamoID = async (dynamoID) => {
+const getS3KeyByDynamoUUID = async (dynamoUUID) => {
   const params = {
     TableName: dynamoName,
     Key: {
       'qut-username': qut_username,
-      id: dynamoID,
+      uuid: dynamoUUID,
     }
   }
 
@@ -72,9 +72,9 @@ const getS3KeyByDynamoID = async (dynamoID) => {
  * Given the S3 Key, download that file to /tmp
  * Update Dynamo DB status table accordingly
  */
-downloadTmpFromS3 = async (dynamoID, s3Key) => {
+downloadTmpFromS3 = async (dynamoUUID, s3Key) => {
   const status = "pending download from S3"
-  updateDynamo(dynamoID, status, "");
+  updateDynamo(dynamoUUID, status, "");
 
   const params = {
     Bucket: s3Ingest,
@@ -92,10 +92,10 @@ downloadTmpFromS3 = async (dynamoID, s3Key) => {
  * Given a file path, upload this file to the public S3 bucket before returning a promise containing the public URL
  * Update Dynamo DB status table accordingly
  */
-async function uploadTranscodeToS3(dynamoID, file) {
+async function uploadTranscodeToS3(dynamoUUID, file) {
   // Update Dynamo DB status
-  const status = "uploading to public S3";
-  updateDynamo(dynamoID, status, "");
+  const status = "uploading";
+  updateDynamo(dynamoUUID, status, "");
 
   console.log("uploading " + file + " to s3 transcode bucket");
 
@@ -111,7 +111,6 @@ async function uploadTranscodeToS3(dynamoID, file) {
   return new Promise((resolve, reject) => {
     s3.upload(params, function(err, result) {
       if(err) {
-        console.log(err);
         reject(err);
       } else {
         // Get public URL of newly uploaded object
@@ -120,7 +119,7 @@ async function uploadTranscodeToS3(dynamoID, file) {
 
         // Update Dynamo DB status
         const status = "finished";
-        updateDynamo(dynamoID, status, s3TranscodeUrl);
+        updateDynamo(dynamoUUID, status, s3TranscodeUrl);
 
         // Resolve promise with the direct link to the newly uploaded object
         resolve(s3TranscodeUrl);
@@ -133,9 +132,9 @@ async function uploadTranscodeToS3(dynamoID, file) {
  * Transcode the given file before uploading to the public Transcode S3 bucket
  * Update Dynamo DB status table accordingly
  */
-async function transcode(dynamoID, file, resPercentage, outputExtension) {
+async function transcode(dynamoUUID, file, resPercentage, outputExtension) {
   // Get S3 Key/original file name + extension
-  const s3Key = await getS3KeyByDynamoID(dynamoID)
+  const s3Key = await getS3KeyByDynamoUUID(dynamoUUID)
   var outputFormat = outputExtension
   if(outputFormat === "mkv") {
     outputFormat = "matroska"
@@ -143,13 +142,14 @@ async function transcode(dynamoID, file, resPercentage, outputExtension) {
 
   // Original file name no extension
   const fileNoExtension = path.parse(s3Key).name;
-  const newFile = "/tmp/" + fileNoExtension + "." + outputExtension;
+
+  // New output file name
+  const newFileName = dynamoUUID + "_" + fileNoExtension + "_" + resPercentage + "." + outputExtension;
+  const newFilePath = "/tmp/" + newFileName;
 
   // Update Dynamo DB status
   const status = "transcoding";
-  updateDynamo(dynamoID, status, "");
-
-  console.log("ffmpeg file path: " + file);
+  updateDynamo(dynamoUUID, status, "");
 
   // Read file into ffmpeg and set its path on a Linux system
   var ffmpegExec = await new ffmpeg(file);
@@ -163,18 +163,20 @@ async function transcode(dynamoID, file, resPercentage, outputExtension) {
 
           // Update Dynamo DB status
           const status = "transcoded";
-          updateDynamo(dynamoID, status, "");
+          updateDynamo(dynamoUUID, status, "");
 
-          uploadTranscodeToS3(dynamoID, newFile).then(url => {
+          uploadTranscodeToS3(dynamoUUID, newFilePath).then(url => {
             resolve(url);
           });
           
         })
         .on('error', function (err) {
             console.log('an error happened: ' + err.message);
+            const status = "failed";
+            updateDynamo(dynamoUUID, status, "");
             reject(err.message);
         })
-        .saveToFile(newFile);
+        .saveToFile(newFilePath);
 
     } catch(err) {
       console.log(err);
@@ -195,9 +197,9 @@ router.get('/', function(req, res, next) {
  */
 router.post('/', async function(req, res) {
   // Dynamo DB sort key
-  const dynamoID = req.query.dynamoID;
-  if(!dynamoID) {
-    res.status(400).send("No DynamoID was provided");
+  const dynamoUUID = req.query.dynamoUUID;
+  if(!dynamoUUID) {
+    res.status(400).send("No dynamoUUID provided");
   }
 
   // Transcode resolution default to 100% if not specified, or if 0
@@ -211,15 +213,15 @@ router.post('/', async function(req, res) {
     outputFormat = "mkv";
   }
 
-  const s3Key = await getS3KeyByDynamoID(dynamoID);
+  const s3Key = await getS3KeyByDynamoUUID(dynamoUUID);
 
   try {
     const tmpFile = await new Promise((resolve, reject) => {
-      resolve(downloadTmpFromS3(dynamoID, s3Key)).catch((err) => reject(err));
+      resolve(downloadTmpFromS3(dynamoUUID, s3Key)).catch((err) => reject(err));
     })
 
     try {
-      transcode(dynamoID, tmpFile, resPercentage, outputFormat).then(url => {
+      transcode(dynamoUUID, tmpFile, resPercentage, outputFormat).then(url => {
         res.status(200).send({
           s3TranscodeUrl: url
         });
