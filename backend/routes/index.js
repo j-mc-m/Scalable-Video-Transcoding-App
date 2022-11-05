@@ -52,7 +52,7 @@ const updateDynamo = async (dynamoID, status, s3TranscodeUrl) => {
 
 
 /********
- * Update the Dynamo DB table status and/or add the transcoded URL
+ * Returns the S3 Key from the Dynamo DB status table
  */
 const getS3KeyByDynamoID = async (dynamoID) => {
   const params = {
@@ -69,7 +69,8 @@ const getS3KeyByDynamoID = async (dynamoID) => {
 
 
 /********
- * Update the Dynamo DB table status and/or add the transcoded URL
+ * Given the S3 Key, download that file to /tmp
+ * Update Dynamo DB status table accordingly
  */
 downloadTmpFromS3 = async (dynamoID, s3Key) => {
   const status = "pending download from S3"
@@ -88,7 +89,8 @@ downloadTmpFromS3 = async (dynamoID, s3Key) => {
 }
 
 /********
- * Given a file path it will upload it to the public Transcode S3 bucket with the basename as the key
+ * Given a file path, upload this file to the public S3 bucket before returning a promise containing the public URL
+ * Update Dynamo DB status table accordingly
  */
 async function uploadTranscodeToS3(dynamoID, file) {
   // Update Dynamo DB status
@@ -129,9 +131,19 @@ async function uploadTranscodeToS3(dynamoID, file) {
 
 /********
  * Transcode the given file before uploading to the public Transcode S3 bucket
+ * Update Dynamo DB status table accordingly
  */
-async function transcode(dynamoID, file, s3Key) {
-  const newFile = "/tmp/" + s3Key + ".mkv";
+async function transcode(dynamoID, file, resPercentage, outputExtension) {
+  // Get S3 Key/original file name + extension
+  const s3Key = await getS3KeyByDynamoID(dynamoID)
+  var outputFormat = outputExtension
+  if(outputFormat === "mkv") {
+    outputFormat = "matroska"
+  }
+
+  // Original file name no extension
+  const fileNoExtension = path.parse(s3Key).name;
+  const newFile = "/tmp/" + fileNoExtension + "." + outputExtension;
 
   // Update Dynamo DB status
   const status = "transcoding";
@@ -145,7 +157,7 @@ async function transcode(dynamoID, file, s3Key) {
 
   return new Promise((resolve, reject) => {
     try {
-      ffmpegExec.withSize('75%').withFps(24).toFormat("matroska")
+      ffmpegExec.withSize(resPercentage + '%').withFps(24).toFormat(outputFormat)
         .on("end", function () {
           console.log('file has been converted successfully');
 
@@ -182,9 +194,21 @@ router.get('/', function(req, res, next) {
  * POST home page
  */
 router.post('/', async function(req, res) {
+  // Dynamo DB sort key
   const dynamoID = req.query.dynamoID;
   if(!dynamoID) {
     res.status(400).send("No DynamoID was provided");
+  }
+
+  // Transcode resolution default to 100% if not specified, or if 0
+  var resPercentage = req.query.resPercentage;
+  if(!resPercentage || resPercentage <= "0") {
+    resPercentage = "100";
+  }
+
+  var outputFormat = req.query.outputFormat;
+  if(!outputFormat) { 
+    outputFormat = "mkv";
   }
 
   const s3Key = await getS3KeyByDynamoID(dynamoID);
@@ -195,18 +219,23 @@ router.post('/', async function(req, res) {
     })
 
     try {
-      transcode(dynamoID, tmpFile, s3Key).then(url => {
+      transcode(dynamoID, tmpFile, resPercentage, outputFormat).then(url => {
         res.status(200).send({
           s3TranscodeUrl: url
         });
+      }).catch((err) => {
+        console.log(err);
+        res.status(400).send(err);
       });
       
     } catch(err) {
       console.log(err);
+      res.status(400).send(err);
     }
 
   } catch(err) {
     console.log(err);
+    res.status(400).send(err);
   }
 });
 
