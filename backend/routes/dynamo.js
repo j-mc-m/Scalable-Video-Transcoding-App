@@ -4,9 +4,6 @@ require('dotenv').config();
 // AWS configuration
 const AWS = require('aws-sdk');
 
-// Amazon S3 setup
-s3 = new AWS.S3({apiVersion: '2006-03-01'});
-
 // Load AWS credentials from .env
 AWS.config.update({
     region: process.env.AWS_DEFAULT_REGION,
