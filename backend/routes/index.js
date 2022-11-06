@@ -1,6 +1,6 @@
 // Imports
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const router = express.Router();
 
 // External functions
 const { getS3KeyByDynamoUUID } = require("./dynamo");

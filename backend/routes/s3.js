@@ -1,7 +1,7 @@
 // Imports
 require('dotenv').config();
 const fs = require('fs').promises;
-var path = require('path');
+const path = require('path');
 
 // External functions
 const { updateDynamo } = require("./dynamo");
@@ -20,6 +20,9 @@ AWS.config.update({
 // Load S3 bucket names from .env
 const s3Ingest = process.env.AWS_S3_INGEST;
 const s3Transcode = process.env.AWS_S3_TRANSCODE;
+
+// Amazon S3 setup
+const s3 = new AWS.S3({apiVersion: '2006-03-01'});
 
 /********
  * Given the S3 Key, download that file to /tmp

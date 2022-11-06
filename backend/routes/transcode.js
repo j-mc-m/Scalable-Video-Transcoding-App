@@ -1,6 +1,6 @@
 // Imports
 const ffmpeg = require('fluent-ffmpeg');
-var path = require('path');
+const path = require('path');
 
 // External functions
 const { getS3KeyByDynamoUUID, updateDynamo } = require("./dynamo");
