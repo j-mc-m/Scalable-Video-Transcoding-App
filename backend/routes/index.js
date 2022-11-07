@@ -40,7 +40,7 @@ router.post('/', async function(req, res) {
     try {
         const tmpFile = await new Promise((resolve, reject) => {
             resolve(downloadTmpFromS3(dynamoUUID, s3Key)).catch((err) => reject(err));
-        })
+        });
 
         try {
             transcode(dynamoUUID, tmpFile, resPercentage, outputFormat).then(url => {
