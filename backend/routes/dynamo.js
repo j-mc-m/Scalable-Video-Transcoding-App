@@ -54,4 +54,20 @@ const qut_username = process.env.QUT_USERNAME;
     return await dynamoClient.put(params).promise();
 }
 
-module.exports = { getS3KeyByDynamoUUID, updateDynamo };
+/********
+ * Returns the S3 Key from the Dynamo DB status table
+ */
+ const getStatusByDynamoUUID = async (dynamoUUID) => {
+    const params = {
+        TableName: dynamoName,
+        Key: {
+            'qut-username': qut_username,
+            uuid: dynamoUUID,
+        }
+    }
+  
+    const data = await dynamoClient.get(params).promise();
+    return data.Item.status;
+}
+
+module.exports = { getS3KeyByDynamoUUID, updateDynamo, getStatusByDynamoUUID };
