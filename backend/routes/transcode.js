@@ -10,7 +10,7 @@ const { uploadTranscodeToS3 } = require("./s3");
  * Transcode the given file before uploading to the public Transcode S3 bucket
  * Update Dynamo DB status table accordingly
  */
- async function transcode(dynamoUUID, file, resPercentage, outputExtension) {
+ async function transcode(dynamoUUID, fileName, resPercentage, outputExtension) {
     // Get S3 Key/original file name + extension
     const s3Key = await getS3KeyByDynamoUUID(dynamoUUID)
 
@@ -32,12 +32,14 @@ const { uploadTranscodeToS3 } = require("./s3");
     updateDynamo(dynamoUUID, status, "");
   
     // Read file into ffmpeg and set its path on a Linux system
-    var ffmpegExec = await new ffmpeg(file);
+    var ffmpegExec = await new ffmpeg(fileName);
     ffmpegExec.setFfmpegPath("/usr/bin/ffmpeg");
   
     return new Promise((resolve, reject) => {
         try {
-            ffmpegExec.withSize(resPercentage + '%').withFps(24).toFormat(outputFormat)
+            ffmpegExec.withSize(resPercentage + '%')
+            .withFps(24)
+            .toFormat(outputFormat)
             .on("end", function () {
                 console.log('file has been converted successfully');
     
@@ -48,7 +50,6 @@ const { uploadTranscodeToS3 } = require("./s3");
                 uploadTranscodeToS3(dynamoUUID, newFilePath).then(url => {
                     resolve(url);
                 });
-                
             })
             .on('error', function (err) {
                 console.log('an error happened: ' + err.message);
