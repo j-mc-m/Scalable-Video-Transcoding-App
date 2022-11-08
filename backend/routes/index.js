@@ -40,17 +40,18 @@ router.post('/', async function(req, res) {
     try {
         const tmpFile = await new Promise((resolve, reject) => {
             resolve(downloadTmpFromS3(dynamoUUID, s3Key)).catch((err) => reject(err));
-        })
+        });
 
         try {
             transcode(dynamoUUID, tmpFile, resPercentage, outputFormat).then(url => {
                 res.status(200).send({
-                s3TranscodeUrl: url
+                    s3TranscodeUrl: url
+                });
+            })
+            .catch((err) => {
+                console.log(err);
+                res.status(400).send(err);
             });
-        }).catch((err) => {
-            console.log(err);
-            res.status(400).send(err);
-        });
         
         } catch(err) {
             console.log(err);
@@ -88,12 +89,7 @@ router.post('/status', async function(req, res) {
         res.status(200).send({
             status: status
         });
-
     }
-    /*
-    try {
-    } catch(err) {
-    }*/
 });
 
 module.exports = router;
