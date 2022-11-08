@@ -20,10 +20,7 @@ export default function VideoDropZone(props) {
             'video/webm': ['.webm'],
             'video/x-matroska': ['.mkv'],
             'video/x-msvideo': ['.avi'],
-            'video/x-ms-wmv': ['.wmv'],
             'video/x-flv': ['.flv'],
-            'video/3gpp': ['.3gp'],
-            'video/3gpp2': ['.3g2'],
             'video/quicktime': ['.mov'],
             'video/x-m4v': ['.m4v']
         }
