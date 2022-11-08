@@ -16,8 +16,8 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static('../client/build'))
 
-app.use('/upload', uploadRouter);
-app.use('/status', statusRouter);
+app.use('/api/upload', uploadRouter);
+app.use('/api/status', statusRouter);
 
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
