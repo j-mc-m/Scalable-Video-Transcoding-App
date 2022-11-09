@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react";
-
-import { BsFillPatchQuestionFill } from 'react-icons/bs';
 import { Button } from "reactstrap";
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { Link } from "react-router-dom";
 
 export default function Home() {
 
@@ -22,7 +19,7 @@ export default function Home() {
     }, []);
 
     function checkStatusAPI() {
-        const checkURI = process.env.NODE_ENV === "development" ? "http://192.168.1.111:3001/api/status/" : "/api/status/";
+        const checkURI = process.env.NODE_ENV === "development" ? "http://localhost:3001/api/status/" : "/api/status/";
         setLoading(true);
         setError(false);
         setErrorMsg(null);

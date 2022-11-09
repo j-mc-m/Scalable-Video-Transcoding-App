@@ -13,7 +13,7 @@ export default function Home() {
     const [errorMsg, setErrorMsg] = useState(null);
     const [success, setSuccess] = useState(false);
     const [returnedID, setReturnedID] = useState(null);
-    const uploadURI = process.env.NODE_ENV === "development" ? "http://192.168.1.111:3001/api/upload" : "/api/upload";
+    const uploadURI = process.env.NODE_ENV === "development" ? "http://localhost:3001/api/upload" : "/api/upload";
     const onSubmit = data => {
         data.preventDefault();
         setLoading(true);
