@@ -50,7 +50,7 @@ const getStatusByDynamoUUID = async (dynamoUUID) => {
     }
 
     const data = await dynamoClient.get(params).promise();
-    return data.Item.status;
+    return data.Item;
 }
 
 module.exports = { addToDynamo, getStatusByDynamoUUID };
