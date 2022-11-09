@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 
 // External functions
-const { getS3KeyByDynamoUUID, getStatusByDynamoUUID } = require("./dynamo");
+const { getStatusByDynamoUUID } = require("./dynamo");
 const { downloadTmpFromS3 } = require("./s3");
 const { transcode } = require("./transcode");
 
@@ -35,11 +35,9 @@ router.post('/', async function(req, res) {
         outputFormat = "mkv";
     }
 
-    const s3Key = await getS3KeyByDynamoUUID(dynamoUUID);
-
     try {
         const tmpFile = await new Promise((resolve, reject) => {
-            resolve(downloadTmpFromS3(dynamoUUID, s3Key)).catch((err) => reject(err));
+            resolve(downloadTmpFromS3(dynamoUUID)).catch((err) => reject(err));
         });
 
         try {

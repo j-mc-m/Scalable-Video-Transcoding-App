@@ -47,7 +47,8 @@ const qut_username = process.env.QUT_USERNAME;
             uuid: dynamoUUID,
             s3Key: s3Key,
             status: status,
-            s3TranscodeUrl: s3TranscodeUrl
+            s3TranscodeUrl: s3TranscodeUrl,
+            //format: mp4
         },
     }
   

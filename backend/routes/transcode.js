@@ -1,16 +1,28 @@
 // Imports
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
+const probe = require('node-ffprobe')
+const ffprobeInstaller = require('@ffprobe-installer/ffprobe')
 
 // External functions
 const { getS3KeyByDynamoUUID, updateDynamo } = require("./dynamo");
 const { uploadTranscodeToS3 } = require("./s3");
 
 /********
+ * Get and return video duration
+ */
+getDuration = async (fileName) => {
+    await probe(fileName).then((probeData) => {
+        console.log(probeData)
+        return probeData
+    });
+}
+
+/********
  * Transcode the given file before uploading to the public Transcode S3 bucket
  * Update Dynamo DB status table accordingly
  */
- async function transcode(dynamoUUID, fileName, resPercentage, outputExtension) {
+async function transcode(dynamoUUID, fileName, resPercentage, outputExtension) {
     // Get S3 Key/original file name + extension
     const s3Key = await getS3KeyByDynamoUUID(dynamoUUID)
 
@@ -19,6 +31,14 @@ const { uploadTranscodeToS3 } = require("./s3");
     if(outputFormat === "mkv") {
         outputFormat = "matroska"
     }
+
+   
+    const fileDuration = await new Promise((resolve, reject) => {
+        resolve(getDuration(fileName)).catch((err) => reject(err));
+    });
+
+    console.log(fileDuration)
+
   
     // Original file name no extension
     const fileNoExtension = path.parse(s3Key).name;

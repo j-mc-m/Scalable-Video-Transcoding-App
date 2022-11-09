@@ -4,7 +4,7 @@ const fs = require('fs').promises;
 const path = require('path');
 
 // External functions
-const { updateDynamo } = require("./dynamo");
+const { getS3KeyByDynamoUUID, updateDynamo } = require("./dynamo");
 
 // AWS configuration
 const AWS = require('aws-sdk');
@@ -28,7 +28,8 @@ const s3 = new AWS.S3({apiVersion: '2006-03-01'});
  * Given the S3 Key, download that file to /tmp
  * Update Dynamo DB status table accordingly
  */
-downloadTmpFromS3 = async (dynamoUUID, s3Key) => {
+downloadTmpFromS3 = async (dynamoUUID) => {
+    const s3Key = await getS3KeyByDynamoUUID(dynamoUUID);
     const status = "pending download from S3"
     updateDynamo(dynamoUUID, status, "");
   

@@ -6,11 +6,13 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
+    "@ffprobe-installer/ffprobe": "^1.4.1",
     "aws-sdk": "^2.1243.0",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
     "dotenv": "^16.0.3",
     "express": "~4.16.1",
+    "ffprobe": "^1.1.2",
     "fluent-ffmpeg": "^2.1.2",
     "http-errors": "~1.6.3",
     "https": "^1.0.0",
@@ -18,6 +20,7 @@
     "kue": "^0.11.6",
     "md5sum": "^0.9.0",
     "morgan": "~1.9.1",
+    "node-ffprobe": "^3.0.0",
     "nodemon": "^2.0.20"
   }
 }
