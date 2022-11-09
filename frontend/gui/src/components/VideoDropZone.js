@@ -1,6 +1,5 @@
 import React from "react";
-import { BsFillPatchQuestionFill } from 'react-icons/bs';
-import { Form, Button } from "reactstrap";
+import { Button } from "reactstrap";
 import { useDropzone } from 'react-dropzone';
 
 export default function VideoDropZone(props) {
@@ -11,7 +10,7 @@ export default function VideoDropZone(props) {
         getInputProps
     } = useDropzone({
         maxFiles: 1,
-        maxSize: 104857600, // 100 megabytes enough ?
+        maxSize: 104857600, // 100 megabytes
         accept: {
             'image/gif': ['.gif'],
             'video/mp4': ['.mp4'],
@@ -56,7 +55,10 @@ export default function VideoDropZone(props) {
                 {fileRejectionItems.length > 0 ? <div><h4 className="mb-0 mt-2">Bad file - try again</h4></div> : ""}
             </div>
             <aside>
-                {acceptedFileItems.length > 0 && !props.uploading && !props.success ? <div className="d-grid gap-2 mt-4 col-6 mx-auto text-center"><Button color="success" type="submit">Upload</Button></div> : ""}
+                {acceptedFileItems.length > 0 && !props.uploading && !props.success ?
+                    <div className="d-grid gap-2 mt-4 col-6 mx-auto text-center">
+                        <Button color="success" type="submit">Upload</Button></div>
+                    : ""}
             </aside>
         </section>
     );

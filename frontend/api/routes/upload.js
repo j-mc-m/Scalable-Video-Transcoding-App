@@ -9,7 +9,7 @@ const uploadPath = __dirname + '/../uploads/';
 
 router.use(fileUpload({
     limits: { fileSize: 104857600, files: 1 }, // 100 MiB
-    createParentPath: true,
+    //createParentPath: true,
     useTempFiles: true,
     safeFileNames: true,
     abortOnLimit: true,
@@ -51,6 +51,7 @@ router.post('/', function (req, res, next) {
                     name: video.name,
                     mimetype: video.mimetype,
                     size: video.size,
+                    convertTo: req.body.format,
                     id: "soon",
                 }
             });

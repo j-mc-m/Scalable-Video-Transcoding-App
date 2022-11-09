@@ -26,7 +26,6 @@ footer a {
     color: #888;
 }
 
-
 /* Navigation */
 .nav-fixed-height {
     height: 70px;
@@ -34,14 +33,6 @@ footer a {
 
 nav.bg-custom {
     background-color: #ffc971;
-}
-
-div .loggedInAs {
-    font-size: 14px;
-}
-
-.nav-pills .nav-link.active {
-    background-color: #ffe3b7;
 }
 
 /* Loading */
@@ -57,19 +48,18 @@ div.loading p {
     font-style: italic;
 }
 
-
 div.dropzone {
-flex: 1;
-display: flex;
-flex-direction: column;
-align-items: center;
-padding: 20px;
-border-width: 2;
-border-radius: 2;
-border-color: #ffc971;
-border-style: dashed;
-background-color: #fff6e9;
-color: #888;
-outline: none;
-transition: border .24s ease-in-out;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    border-width: 2;
+    border-radius: 2;
+    border-color: #ffc971;
+    border-style: dashed;
+    background-color: #fff6e9;
+    color: #888;
+    outline: none;
+    transition: border .24s ease-in-out;
 }
