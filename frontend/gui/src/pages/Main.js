@@ -6,7 +6,14 @@ import { Link } from "react-router-dom";
 
 export default function Home() {
     document.title = "Video Converter - Upload a file";
-
+    const [videoFormat, videoFormatSetter] = useState('mkv');
+    const [videoFile, videoFileSetter] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
+    const [errorMsg, setErrorMsg] = useState(null);
+    const [success, setSuccess] = useState(false);
+    const [returnedID, setReturnedID] = useState(null);
+    const uploadURI = process.env.NODE_ENV === "development" ? "http://192.168.1.111:3001/api/upload" : "/api/upload";
     const onSubmit = data => {
         data.preventDefault();
         setLoading(true);
@@ -24,11 +31,8 @@ export default function Home() {
             setLoading(false);
             return;
         }
-        axios.post('http://192.168.1.111:3001/api/upload', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        })
+        // file upload
+        axios.post(uploadURI, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
             .then(res => {
                 setLoading(false);
                 setSuccess(true);
@@ -41,17 +45,12 @@ export default function Home() {
                 console.log(err);
             })
     };
-    const [videoFormat, videoFormatSetter] = useState('mkv');
-    const [videoFile, videoFileSetter] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(false);
-    const [errorMsg, setErrorMsg] = useState(null);
-    const [success, setSuccess] = useState(false);
-    const [returnedID, setReturnedID] = useState(null);
 
     useEffect(() => {
-        console.log("videoFile: " + videoFile);
-    }, [videoFile]);
+        setError(false);
+        setErrorMsg(null);
+        setSuccess(false);
+    }, [videoFormat]);
 
     return (
         <div className="Page">
