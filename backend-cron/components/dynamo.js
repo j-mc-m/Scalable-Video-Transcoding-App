@@ -87,11 +87,36 @@ const getSinglePendingItem = async () => {
         },
         KeyConditionExpression: '#PK = :qut_username',
         FilterExpression: '#s = :status',
-        Limit: 1,
     }
 
     const data = await dynamoClient.query(params).promise();
     return data.Items[0];
 }
+/********
+ * Returns an pending item from the Dynamo DB status table
+ */
+const getSinglePendingItemSync = () => {
+    const params = {
+        TableName: dynamoName,
+        ExpressionAttributeNames: {
+            "#PK": "qut-username",
+            "#s": "status",
+        },
+        ExpressionAttributeValues: {
+            ':qut_username': qut_username,
+            ':status': 'pending',
+        },
+        KeyConditionExpression: '#PK = :qut_username',
+        FilterExpression: '#s = :status',
+        Limit: 1,
+    }
 
-module.exports = { getS3KeyByDynamoUUID, updateDynamo, getStatusByDynamoUUID, getSinglePendingItem };
+    dynamoClient.query(params).promise().then((data) => {
+        return data.Items[0];
+    }).catch((err) => {
+        console.log(err);
+        return undefined;
+    });
+}
+
+module.exports = { getS3KeyByDynamoUUID, updateDynamo, getStatusByDynamoUUID, getSinglePendingItem, getSinglePendingItemSync };

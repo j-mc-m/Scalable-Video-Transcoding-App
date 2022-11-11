@@ -1,7 +1,5 @@
 const { getSinglePendingItem } = require("./components/dynamo");
 const { transcode } = require("./components/transcode");
-const schedule = require('node-schedule');
-const sh = require('shelljs')
 
 async function transcodePendingItem() {
 
@@ -22,18 +20,9 @@ async function transcodePendingItem() {
         transcode(dynamoUUID, tmpFile, resPercentage, outputFormat).then(url => {
             console.log("Transcode complete - url: " + url);
         }).catch((err) => { console.log(err); });
-    }).catch((err) => { console.log(err); })
-        .finally(() => {
-            return;
-        });
-
+    }).catch((err) => { console.log(err); });
+    return;
 }
-const job = schedule.scheduleJob('* * * * *', function (alreadyRunningNow) {
-    console.log("job now running...");
-    if (sh.exec('ps aux', { silent: true }).grep('ffmpeg').stdout != "\n") {
-        console.log("ffmpeg running - skipping");
-        return;
-    }
-    console.log("ffmpeg not running - will try to transcode new item");
-    transcodePendingItem();
-});
+
+transcodePendingItem();
+
