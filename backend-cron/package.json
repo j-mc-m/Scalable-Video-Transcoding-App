@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@ffprobe-installer/ffprobe": "^1.4.1",
+    "aws-sdk": "^2.1252.0",
+    "dotenv": "^16.0.3",
+    "fluent-ffmpeg": "^2.1.2",
+    "node-ffprobe": "^3.0.0",
+    "path": "^0.12.7"
+  }
+}
