@@ -22,7 +22,7 @@ const qut_username = process.env.QUT_USERNAME;
 /********
  * Returns the S3 Key from the Dynamo DB status table
  */
- const getS3KeyByDynamoUUID = async (dynamoUUID) => {
+const getS3KeyByDynamoUUID = async (dynamoUUID) => {
     const params = {
         TableName: dynamoName,
         Key: {
@@ -30,7 +30,7 @@ const qut_username = process.env.QUT_USERNAME;
             uuid: dynamoUUID,
         }
     }
-  
+
     const data = await dynamoClient.get(params).promise();
     return data.Item.s3Key;
 }
@@ -38,7 +38,7 @@ const qut_username = process.env.QUT_USERNAME;
 /********
  * Update the Dynamo DB table status and/or add the transcoded URL
  */
- const updateDynamo = async (dynamoUUID, status, s3TranscodeUrl) => {
+const updateDynamo = async (dynamoUUID, status, s3TranscodeUrl) => {
     const s3Key = await getS3KeyByDynamoUUID(dynamoUUID);
     const params = {
         TableName: dynamoName,
@@ -51,14 +51,14 @@ const qut_username = process.env.QUT_USERNAME;
             //format: mp4
         },
     }
-  
+
     return await dynamoClient.put(params).promise();
 }
 
 /********
  * Returns the S3 Key from the Dynamo DB status table
  */
- const getStatusByDynamoUUID = async (dynamoUUID) => {
+const getStatusByDynamoUUID = async (dynamoUUID) => {
     const params = {
         TableName: dynamoName,
         Key: {
@@ -66,9 +66,32 @@ const qut_username = process.env.QUT_USERNAME;
             uuid: dynamoUUID,
         }
     }
-  
+
     const data = await dynamoClient.get(params).promise();
     return data.Item.status;
 }
 
-module.exports = { getS3KeyByDynamoUUID, updateDynamo, getStatusByDynamoUUID };
+/********
+ * Returns an pending item from the Dynamo DB status table
+ */
+const getSinglePendingItem = async () => {
+    const params = {
+        TableName: dynamoName,
+        ExpressionAttributeNames: {
+            "#PK": "qut-username",
+            "#s": "status",
+        },
+        ExpressionAttributeValues: {
+            ':qut_username': qut_username,
+            ':status': 'pending',
+        },
+        KeyConditionExpression: '#PK = :qut_username',
+        FilterExpression: '#s = :status',
+        Limit: 1,
+    }
+
+    const data = await dynamoClient.query(params).promise();
+    return data.Items[0];
+}
+
+module.exports = { getS3KeyByDynamoUUID, updateDynamo, getStatusByDynamoUUID, getSinglePendingItem };
