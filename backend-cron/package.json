@@ -5,6 +5,8 @@
     "dotenv": "^16.0.3",
     "fluent-ffmpeg": "^2.1.2",
     "node-ffprobe": "^3.0.0",
-    "path": "^0.12.7"
+    "node-schedule": "^2.1.0",
+    "path": "^0.12.7",
+    "shelljs": "^0.8.5"
   }
 }

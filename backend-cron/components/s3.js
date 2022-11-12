@@ -2,7 +2,6 @@
 require('dotenv').config();
 const fs = require('fs').promises;
 const path = require('path');
-import { unlink } from 'node:fs';
 
 // External functions
 const { getS3KeyByDynamoUUID, updateDynamo } = require("./dynamo");
@@ -75,10 +74,6 @@ async function uploadTranscodeToS3(dynamoUUID, file) {
                 // Get public URL of newly uploaded object
                 const s3TranscodeUrl = result.Location;
                 console.log("successfully uploaded to public s3 transcode: " + s3TranscodeUrl);
-
-                unlink(file, (err) => {
-                    if(err) reject(err);
-                });
 
                 // Update Dynamo DB status
                 const status = "done";
