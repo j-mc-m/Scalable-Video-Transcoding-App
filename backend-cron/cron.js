@@ -28,7 +28,7 @@ async function transcodePendingItem() {
         });
 
 }
-const job = schedule.scheduleJob('* * * * *', function () {
+const job = schedule.scheduleJob('*/15 * * * * *', function () {
     console.log("job starting..checking ffmpeg...");
     if (sh.exec('ps aux', { silent: true }).grep('ffmpeg').stdout != "\n") {
         console.log("ffmpeg running - skipping");
